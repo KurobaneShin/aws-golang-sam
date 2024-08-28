@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -11,47 +13,86 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-type Item struct {
-	ID   string `json:"id"`
-	Data string `json:"data"`
-}
+var dynamoClient *dynamodb.Client
 
-func handler(ctx context.Context) error {
-	// Load the SDK's configuration
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("sa-east-1"))
+func init() {
+	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		if service == dynamodb.ServiceID {
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           "http://172.17.0.1:8000",
+				SigningRegion: "sa-east-1",
+			}, nil
+		}
+		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+	})
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-east-1"),
+		config.WithEndpointResolverWithOptions(customResolver),
+	)
 	if err != nil {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 
-	// Create DynamoDB client
-	svc := dynamodb.NewFromConfig(cfg)
+	dynamoClient = dynamodb.NewFromConfig(cfg)
+}
 
-	item := Item{
-		ID:   "example_id",
-		Data: "example_data",
-	}
+type Item struct {
+	ID   string `dynamodbav:"id"`
+	Name string `dynamodbav:"name"`
+}
 
+func insertItem(ctx context.Context, tableName string, item Item) error {
 	av, err := attributevalue.MarshalMap(item)
 	if err != nil {
-		log.Fatalf("got error marshalling map: %s", err)
+		return fmt.Errorf("failed to marshal item: %v", err)
 	}
 
-	// Put item in DynamoDB table
 	input := &dynamodb.PutItemInput{
+		TableName: aws.String(tableName),
 		Item:      av,
-		TableName: aws.String("MyTable"),
 	}
 
-	_, err = svc.PutItem(ctx, input)
+	_, err = dynamoClient.PutItem(ctx, input)
 	if err != nil {
-		log.Fatalf("got error calling PutItem: %s", err)
+		return fmt.Errorf("failed to put item: %v", err)
 	}
-
-	log.Println("Successfully added item to DynamoDB table")
 
 	return nil
 }
 
+func handleRequest(ctx context.Context) (string, error) {
+	// Use dynamoClient to interact with your local DynamoDB
+	// Example: List tables
+	result, err := dynamoClient.ListTables(ctx, &dynamodb.ListTablesInput{})
+	if err != nil {
+		return "", err
+	}
+
+	// Process the result
+	for _, tableName := range result.TableNames {
+		log.Printf("Table: %s", tableName)
+	}
+
+	// Insert an item
+	item := Item{
+		ID:   "1",
+		Name: "Test Item",
+	}
+	err = insertItem(ctx, "MyTable", item)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("Successfully inserted item in table")
+
+	return "Successfully used dynamoDB", nil
+}
+
 func main() {
-	lambda.Start(handler)
+	if os.Getenv("AWS_SAM_LOCAL") == "true" {
+		log.Println("Running in local SAM environment")
+	}
+	lambda.Start(handleRequest)
 }

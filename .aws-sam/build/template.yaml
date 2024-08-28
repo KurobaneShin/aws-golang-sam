@@ -49,12 +49,19 @@ Resources:
           Properties:
             Path: /dynamo
             Method: GET
-      Policies:
-      - DynamoDBCrudPolicy:
-          TableName:
-            Ref: MyDynamoDBTable
   MyDynamoDBTable:
     Type: AWS::DynamoDB::Table
+    Events:
+      DDBEvent:
+        Type: DynamoDB
+        Properties:
+          Stream:
+            Fn::GetAtt:
+            - MyDynamoDBTable
+            - StreamArn
+          StartingPosition: TRIM_HORIZON
+          BatchSize: 10
+          Enabled: false
     Properties:
       TableName: MyTable
       AttributeDefinitions:

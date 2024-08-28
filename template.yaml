@@ -48,12 +48,17 @@ Resources:
           Properties:
             Path: /dynamo
             Method: GET
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref MyDynamoDBTable
 
   MyDynamoDBTable:
     Type: AWS::DynamoDB::Table
+    Events:
+      DDBEvent:
+        Type: DynamoDB
+        Properties:
+          Stream: !GetAtt MyDynamoDBTable.StreamArn # This must be the name of a DynamoDB table declared in the same template file
+          StartingPosition: TRIM_HORIZON
+          BatchSize: 10
+          Enabled: false
     Properties:
       TableName: MyTable
       AttributeDefinitions:
