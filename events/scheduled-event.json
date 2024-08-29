@@ -1,0 +1,13 @@
+{
+  "version": "0",
+  "id": "12345678-1234-1234-1234-123456789012",
+  "detail-type": "MyCustomEvent",
+  "source": "custom.myapp",
+  "account": "123456789012",
+  "time": "2023-04-28T09:00:00Z",
+  "region": "us-east-1",
+  "resources": [],
+  "detail": {
+    "message": "Hello from sender!"
+  }
+}

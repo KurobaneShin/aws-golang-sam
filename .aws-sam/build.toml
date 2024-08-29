@@ -19,12 +19,38 @@ codeuri = "/home/icaro/projects/aws-golang/sam-app/dynamo"
 runtime = "provided.al2023"
 architecture = "x86_64"
 handler = "main"
-source_hash = "1cf83ecb69460079de714f5ea15385f688bc92a2e3ddb1f6ac30c2d2b0292838"
+source_hash = "a98139a7183556603d7d298132c35336775655a5663eb91db13c8a30b1c43492"
 manifest_hash = ""
 packagetype = "Zip"
 functions = ["MyFunction"]
 
 [function_build_definitions.743f6949-c271-44c7-9749-342324d2eed7.metadata]
+BuildMethod = "go1.x"
+
+[function_build_definitions.99b18e2d-3f23-4d91-afec-8d60220413c3]
+codeuri = "/home/icaro/projects/aws-golang/sam-app/sender"
+runtime = "provided.al2023"
+architecture = "x86_64"
+handler = "main"
+source_hash = "39fe77faec307f6d16350ed8e71466ee6a6f4de7ee0b6aa50075c4607179ff5e"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["SenderFunction"]
+
+[function_build_definitions.99b18e2d-3f23-4d91-afec-8d60220413c3.metadata]
+BuildMethod = "go1.x"
+
+[function_build_definitions.956223f5-9981-464a-b122-3e0e1f24f9ef]
+codeuri = "/home/icaro/projects/aws-golang/sam-app/receiver"
+runtime = "provided.al2023"
+architecture = "x86_64"
+handler = "main"
+source_hash = "5afeb5a40a5456f8f5a52bbcf3496d69d444f644861336048d289c2a0513c91b"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["ReceiverFunction"]
+
+[function_build_definitions.956223f5-9981-464a-b122-3e0e1f24f9ef.metadata]
 BuildMethod = "go1.x"
 
 [layer_build_definitions]

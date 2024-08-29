@@ -12,6 +12,43 @@ Globals:
     MemorySize: 128
 
 Resources:
+  SenderFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      Handler: main
+      CodeUri: sender
+      Runtime: provided.al2023
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt EventBus.Arn
+  ReceiverFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      Handler: main
+      Runtime: provided.al2023
+      CodeUri: receiver
+      Events:
+        CloudWatchEvent:
+          Type: CloudWatchEvent
+          Properties:
+            EventBusName: !Ref EventBus
+            Pattern:
+              source:
+                - custom.myapp
+              detail-type:
+                - MyCustomEvent
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: MyCustomEventBus
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Metadata:
@@ -48,17 +85,8 @@ Resources:
           Properties:
             Path: /dynamo
             Method: GET
-
   MyDynamoDBTable:
     Type: AWS::DynamoDB::Table
-    Events:
-      DDBEvent:
-        Type: DynamoDB
-        Properties:
-          Stream: !GetAtt MyDynamoDBTable.StreamArn # This must be the name of a DynamoDB table declared in the same template file
-          StartingPosition: TRIM_HORIZON
-          BatchSize: 10
-          Enabled: false
     Properties:
       TableName: MyTable
       AttributeDefinitions:
@@ -70,6 +98,17 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - custom.myapp
+        detail-type:
+          - MessageFromSender
+      Targets:
+        - Arn: !GetAtt ReceiverFunction.Arn
+          Id: "ReceiverFunction"
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM

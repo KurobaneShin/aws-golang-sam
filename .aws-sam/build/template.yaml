@@ -10,6 +10,49 @@ Globals:
     Timeout: 5
     MemorySize: 128
 Resources:
+  SenderFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: SenderFunction
+    Properties:
+      Handler: main
+      CodeUri: SenderFunction
+      Runtime: provided.al2023
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - events:PutEvents
+          Resource:
+            Fn::GetAtt:
+            - EventBus
+            - Arn
+  ReceiverFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: ReceiverFunction
+    Properties:
+      Handler: main
+      Runtime: provided.al2023
+      CodeUri: ReceiverFunction
+      Events:
+        CloudWatchEvent:
+          Type: CloudWatchEvent
+          Properties:
+            EventBusName:
+              Ref: EventBus
+            Pattern:
+              source:
+              - custom.myapp
+              detail-type:
+              - MyCustomEvent
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: MyCustomEventBus
   HelloWorldFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -51,17 +94,6 @@ Resources:
             Method: GET
   MyDynamoDBTable:
     Type: AWS::DynamoDB::Table
-    Events:
-      DDBEvent:
-        Type: DynamoDB
-        Properties:
-          Stream:
-            Fn::GetAtt:
-            - MyDynamoDBTable
-            - StreamArn
-          StartingPosition: TRIM_HORIZON
-          BatchSize: 10
-          Enabled: false
     Properties:
       TableName: MyTable
       AttributeDefinitions:
@@ -73,6 +105,20 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+        - custom.myapp
+        detail-type:
+        - MessageFromSender
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - ReceiverFunction
+          - Arn
+        Id: ReceiverFunction
 Outputs:
   HelloWorldAPI:
     Description: API Gateway endpoint URL for Prod environment for First Function
